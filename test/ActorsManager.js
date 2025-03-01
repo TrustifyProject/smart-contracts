@@ -18,7 +18,7 @@ describe("ActorsManager", function () {
         await expect(await accessManager.hasRole(await accessManager.AUTHORIZED_CONTRACT_ROLE(), authorizedContract.address)).to.be.true;
 
         const ActorsManager = await ethers.getContractFactory("ActorsManager");
-        actorsManager = await ActorsManager.deploy(accessManager.target, ethers.encodeBytes32String("donId"), donRouter.address, 1);
+        actorsManager = await ActorsManager.deploy(accessManager.target);
 
         await accessManager.grantAuthorizedContractRole(actorsManager.target);
         await expect(await accessManager.hasRole(await accessManager.AUTHORIZED_CONTRACT_ROLE(), actorsManager.target)).to.be.true;
@@ -26,24 +26,9 @@ describe("ActorsManager", function () {
 
     describe("Actor Registration", function () {
         it("Should registerActor()", async function () {
-            await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('true'), ethers.toUtf8Bytes('')))
+            await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH))
                 .to.emit(actorsManager, "ActorRegistered")
                 .withArgs(ACTOR_TYPE, 0, otherAccount.address, VALID_HASH);
-        });
-
-        it("Should fail to registerActor() on don function compute error", async function () {
-            await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes(''), ethers.toUtf8Bytes('invalid')))
-                .to.emit(actorsManager, "ValidationFailed")
-                .withArgs(ACTOR_TYPE, 0, VALID_HASH, ethers.toUtf8Bytes('invalid'));
-        });
-
-        it("Should fail to registerActor() with an invalid metadata", async function () {
-            await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, INVALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('false'), ethers.toUtf8Bytes('')))
-                .to.emit(actorsManager, "ValidationFailed")
-                .withArgs(ACTOR_TYPE, 0, INVALID_HASH, ethers.toUtf8Bytes('false'));
         });
 
         it("Should fail to registerActor() with invalid actor type", async function () {
@@ -59,24 +44,10 @@ describe("ActorsManager", function () {
 
     describe("Actor Update", function () {
         it("Should updateActor()", async function () {
-            await actorsManager.connect(authorizedContract).updateActor(ACTOR_TYPE, ACTOR_ID, VALID_HASH)
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('true'), ethers.toUtf8Bytes('')))
+            
+            await expect(await actorsManager.connect(authorizedContract).updateActor(ACTOR_TYPE, ACTOR_ID, VALID_HASH))
                 .to.emit(actorsManager, "ActorUpdated")
                 .withArgs(ACTOR_TYPE, ACTOR_ID, VALID_HASH);
-        });
-
-        it("Should fail to updateActor() on don function compute error", async function () {
-            await actorsManager.connect(authorizedContract).updateActor(ACTOR_TYPE, ACTOR_ID, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes(''), ethers.toUtf8Bytes('invalid')))
-                .to.emit(actorsManager, "ValidationFailed")
-                .withArgs(ACTOR_TYPE, ACTOR_ID, VALID_HASH, ethers.toUtf8Bytes('invalid'));
-        });
-
-        it("Should fail to updateActor() with an invalid metadata", async function () {
-            await actorsManager.connect(authorizedContract).updateActor(ACTOR_TYPE, ACTOR_ID, INVALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('false'), ethers.toUtf8Bytes('')))
-                .to.emit(actorsManager, "ValidationFailed")
-                .withArgs(ACTOR_TYPE, ACTOR_ID, INVALID_HASH, ethers.toUtf8Bytes('false'));
         });
 
         it("Should fail to updateActor() with invalid actor type", async function () {
@@ -92,8 +63,7 @@ describe("ActorsManager", function () {
 
     describe("Actor Info", function () {
         it("Should return URI using getActorURI()", async function () {
-            await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('true'), ethers.toUtf8Bytes('')))
+            await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH))
                 .to.emit(actorsManager, "ActorRegistered")
                 .withArgs(ACTOR_TYPE, 0, otherAccount.address, VALID_HASH);
             const info = await actorsManager.getActorURI(ACTOR_TYPE, 0);
@@ -110,12 +80,10 @@ describe("ActorsManager", function () {
         it("Should return URIs with getActorsURIsInBatch()", async function () {
             const batchSize = 2;
 
-            await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('true'), ethers.toUtf8Bytes('')))
+            await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH))
                 .to.emit(actorsManager, "ActorRegistered")
                 .withArgs(ACTOR_TYPE, 0, otherAccount.address, VALID_HASH);
-            await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccountTwo.address, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).fulfillRequest(await actorsManager.requestIdCounter(), ethers.toUtf8Bytes('true'), ethers.toUtf8Bytes('')))
+            await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccountTwo.address, VALID_HASH))
                 .to.emit(actorsManager, "ActorRegistered")
                 .withArgs(ACTOR_TYPE, 1, otherAccountTwo.address, VALID_HASH);
             const info = await actorsManager.connect(authorizedContract).getActorsURIsInBatch(ACTOR_TYPE, 0, 2);

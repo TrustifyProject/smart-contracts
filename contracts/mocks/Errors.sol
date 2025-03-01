@@ -9,8 +9,6 @@ library Errors {
     error UnAuthorized(string expectedRole);
     error DoubleRegistrationNotAllowed();
     error SoulBoundTransferNotAllowed();
-    error UnexpectedRequestID();
-    error UnexpectedAgent(address calledBy, address expected);
     error FulfillmentFailed();
     error InvalidTokenId();
 }

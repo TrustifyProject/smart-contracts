@@ -6,16 +6,12 @@ import { String } from "./String.sol";
 import { Errors } from "./Errors.sol";
 import { AccessManager } from "./AccessManager.sol";
 
-import { FunctionsClient } from "@chainlink/contracts@1.2.0/src/v0.8/functions/v1_0_0/FunctionsClient.sol";
-import { FunctionsRequest } from "@chainlink/contracts@1.2.0/src/v0.8/functions/v1_0_0/libraries/FunctionsRequest.sol";
-
 /**
 * @title Actors Manager.
 * @dev Aggregates the collections for all actor types & performs the necessary validation.
 * @custom:security-contact @captainunknown7@gmail.com
 */
-contract ActorsManager is FunctionsClient {
-    using FunctionsRequest for FunctionsRequest.Request;
+contract ActorsManager {
     AccessManager public acl;
     bytes32 immutable AUTHORIZED_CONTRACT_ROLE;
 
@@ -36,32 +32,8 @@ contract ActorsManager is FunctionsClient {
     }
     mapping(uint8 => Actor) public actors;
 
-    // Chainlink config
-    struct RequestInfo {
-        uint256 actorId;
-        address account;
-        bool isNewRegistration;
-        ActorType actorType;
-        string hash;
-    }
-    mapping(bytes32 => RequestInfo) private lastValidationRequest;
-
-    string validationSource = "const actorType = args[0];"
-        "const hash = args[1];"
-        "const res = await Functions.makeHttpRequest("
-        "{ url: `https://trustifyscm.com/api/validate-actor-meta?type=${actorType}&hash=${hash}`,"
-        "timeout: 9000 });"
-        "if (res.error || res.status !== 200) throw Error('Request Failed');"
-        "const { data } = res;"
-        "return Functions.encodeUint256(data.isValid);";
-    address donRouter;
-    bytes32 donId;
-    uint64 donSubscriptionId;
-    uint32 donCallbackGasLimit; // Might be redundant if deployed on Hyperledger
-
     event ActorRegistered(uint8 indexed actorType, uint256 indexed actorId, address indexed account, string hash);
     event ActorUpdated(uint8 indexed actorType, uint256 indexed actorId, string newHash);
-    event ActorValidationFailed(uint8 indexed actorType, uint256 indexed actorId, string hash, bytes error);
 
     modifier onlyValidActorType(uint8 actorType) {
         if (!(actorType < ACTOR_TYPE_COUNT)) revert Errors.InvalidActorType(actorType, ACTOR_TYPE_COUNT);
@@ -70,21 +42,14 @@ contract ActorsManager is FunctionsClient {
 
     /**
     * @dev Sets the ACL and determines the hash AUTHORIZED_CONTRACT_ROLE.
-    * Along with the Chainlink Configuration.
     */
-    constructor(address aclAddress, bytes32 _donId, address _donRouter, uint64 _donSubscriptionId)
-        FunctionsClient(_donRouter)
-    {
+    constructor(address aclAddress) {
         actors[0] = new Actor(aclAddress, "Farmer", "FG");
         actors[1] = new Actor(aclAddress, "Processor", "PR");
         actors[2] = new Actor(aclAddress, "Bottler", "BT");
         actors[3] = new Actor(aclAddress, "Distributor", "DS");
         actors[4] = new Actor(aclAddress, "Retailer", "RT");
         actors[5] = new Actor(aclAddress, "Consumer", "CU");
-
-        donId = _donId;
-        donCallbackGasLimit = 600000;
-        donSubscriptionId = _donSubscriptionId;
 
         acl = AccessManager(aclAddress);
         AUTHORIZED_CONTRACT_ROLE = acl.AUTHORIZED_CONTRACT_ROLE();
@@ -100,14 +65,9 @@ contract ActorsManager is FunctionsClient {
         public
         onlyValidActorType(actorType)
         onlyAuthorizedContract
-    {
-        lastValidationRequest[validateMetadata(actorType, hash)] = RequestInfo({
-            actorId: 0,
-            account: account,
-            isNewRegistration: true,
-            actorType: ActorType(actorType),
-            hash: hash
-        });
+    {        
+        uint256 actorId = actors[actorType].registerActor(account, hash);
+        emit ActorRegistered(actorType, actorId, account, hash);
     }
 
     /**
@@ -121,13 +81,8 @@ contract ActorsManager is FunctionsClient {
         onlyValidActorType(actorType)
         onlyAuthorizedContract
     {
-        lastValidationRequest[validateMetadata(actorType, hash)] = RequestInfo({
-            actorId: actorId,
-            account: address(0),
-            isNewRegistration: false,
-            actorType: ActorType(actorType),
-            hash: hash
-        });
+        actors[actorType].updateActor(actorId, hash);
+        emit ActorUpdated(actorType, actorId, hash);
     }
 
     /**
@@ -172,60 +127,5 @@ contract ActorsManager is FunctionsClient {
             actorURIs[i] = actorContract.tokenURI(cursor + i);
         }
         return actorURIs;
-    }
-
-    /**
-    * @dev An internal function to be called to send a validation request.
-    * @param actorType - Type of the actor (Expected: 0-5).
-    * @param hash - The hash of the metadata to be validated.
-    * @return The DON Function request ID.
-    */
-    function validateMetadata(uint8 actorType, string calldata hash) internal returns(bytes32) {
-        FunctionsRequest.Request memory req;
-        req.initializeRequestForInlineJavaScript(validationSource);
-        string[] memory args = new string[](2);
-        args[0] = String.toString(actorType);
-        args[1] = hash;
-        req.setArgs(args);
-        return _sendRequest(
-            req.encodeCBOR(),
-            donSubscriptionId,
-            donCallbackGasLimit,
-            donId
-        );
-    }
-
-    /**
-    * @dev An internal function to be called by the donRouter.
-    * @param requestId - The validation request ID.
-    * @param response - The response from the DON Function.
-    * @param err - The DON Function error (if any).
-    */
-    function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
-        RequestInfo memory info = lastValidationRequest[requestId];
-        if (bytes(info.hash).length == 0) revert Errors.UnexpectedRequestID();
-
-        uint256 actorId = info.actorId;
-        uint8 actorType = uint8(info.actorType);
-        string memory hash = info.hash;
-
-        if (err.length > 0) {
-            emit ActorValidationFailed(actorType, actorId, hash, err);
-            return;
-        } else if (!String.strcmp(string(response), "true")) {
-            emit ActorValidationFailed(actorType, actorId, hash, response);
-            return;
-        }
-
-        if (info.isNewRegistration) {
-            address account = info.account;
-            actorId = actors[actorType].registerActor(account, hash);
-            emit ActorRegistered(actorType, actorId, account, hash);
-        } else {
-            actors[actorType].updateActor(actorId, hash);
-            emit ActorUpdated(actorType, actorId, hash);
-        }
-
-        delete lastValidationRequest[requestId];
     }
 }

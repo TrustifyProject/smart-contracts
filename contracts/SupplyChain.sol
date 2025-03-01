@@ -45,14 +45,11 @@ contract SupplyChain is BatchManager {
     mapping(uint256 => IdsForDistributors) private distributors;
     mapping(uint256 => IdsForRetailers) private retailers;
 
-    // TODO: Update mocks
-
     /**
     * @dev Sets the ACL and determines the hash AUTHORIZED_CONTRACT_ROLE.
     * And handles the deployment of the `BatchManager` contract.
     */
-    constructor(address aclAddress, bytes32 _donId, address _donRouter, uint64 _donSubscriptionId)
-    BatchManager(_donId, _donRouter, _donSubscriptionId)
+    constructor(address aclAddress) BatchManager()
     {
         acl = AccessManager(aclAddress);
         COMPANY_USER_ROLE = acl.COMPANY_USER_ROLE();
@@ -63,50 +60,25 @@ contract SupplyChain is BatchManager {
     * @param farmerId - Farmer ID of the Harvester of the batch.
     * @param hash - The hash of the harvested batch.
     */
-    function addHarvestedBatch(
-        uint256 farmerId,
-        uint32 latitude,
-        uint32 longitude,
-        string calldata harvestMethod,
-        string calldata hash
-    ) public onlyCompanyUser {
-        BatchTypes.HarvestEvent memory _harvestEvent = BatchTypes.HarvestEvent({
-            date: uint64(block.timestamp),
-            latitude: latitude,
-            longitude: longitude,
-            method: harvestMethod
-        });
-        createBatch(farmerId, _harvestEvent, hash);
+    function addHarvestedBatch(uint256 farmerId, string calldata hash) public onlyCompanyUser {
+        createBatch(farmerId, hash);
     }
 
     /**
     * @dev To push the harvested batch to the processed state. Requires onchain state & metadata validation.
     * @param batchId - BatchID of the batch to be processed.
     * @param processorId - The actor ID of the processor involved.
-    * @param latitude - The latitude of the processing facility.
-    * @param longitude - The longitude of the processing facility.
-    * @param quantity - The quantity of the batch processed.
     * @param hash - Updated hash of the processed batch.
     */
     function pushBatchToProcessed(
         uint256 batchId,
         uint256 processorId,
-        uint32 latitude,
-        uint32 longitude,
-        uint256 quantity,
         string calldata hash
     ) public onlyCompanyUser {
-        BatchTypes.BatchInfo storage batchInfo = batchInfoForInternalId[internalIdForBatchId[batchId]];
+        BatchTypes.BatchInfo storage batchInfo = batchInfoForId[batchId];
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.Processed);
         batchInfo.state = BatchTypes.BatchState.Processed;
         batchInfo.processorId = processorId;
-        batchInfo.processingEvent = BatchTypes.ProcessingEvent({
-            date: uint64(block.timestamp),
-            latitude: latitude,
-            longitude: longitude,
-            quantity: quantity,
-            qualityTest: false
-        });
         updateBatch(batchId, batchInfo, hash);
     }
 
@@ -114,29 +86,17 @@ contract SupplyChain is BatchManager {
     * @dev To push the processed batch to the packaged state. Requires onchain state & metadata validation.
     * @param batchId - BatchID of the batch to be packaged.
     * @param packagerId - The actor ID of the packager involved.
-    * @param latitude - The latitude of the packaging facility.
-    * @param longitude - The longitude of the packaging facility.
-    * @param quantity - The quantity of the batch packaged.
     * @param hash - Updated hash of the packaged batch.
     */
     function pushBatchToPackaged(
         uint256 batchId,
         uint256 packagerId,
-        uint32 latitude,
-        uint32 longitude,
-        uint256 quantity,
         string calldata hash
     ) public onlyCompanyUser {
-        BatchTypes.BatchInfo storage batchInfo = batchInfoForInternalId[internalIdForBatchId[batchId]];
+        BatchTypes.BatchInfo storage batchInfo = batchInfoForId[batchId];
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.Packaged);
         batchInfo.state = BatchTypes.BatchState.Packaged;
         batchInfo.packagerId = packagerId;
-        batchInfo.packagingEvent = BatchTypes.PackagingEvent({
-            date: uint64(block.timestamp),
-            latitude: latitude,
-            longitude: longitude,
-            quantity: quantity
-        });
         updateBatch(batchId, batchInfo, hash);
     }
 
@@ -144,36 +104,17 @@ contract SupplyChain is BatchManager {
     * @dev To assign a packaged batch to a distributor. Requires onchain state & metadata validation.
     * @param batchId - BatchID of the batch to be distributed.
     * @param distributorId - The actor ID of the distributor involved.
-    * @param latitude - The latitude of the distribution facility.
-    * @param longitude - The longitude of the distribution facility.
-    * @param storageCondition - Storage Condition of the batch during distribution.
-    * Expected: "cool", "refrigerated", "frozen", "ambient", "warm", "dry",
-    * "humid", "controlled-humidity", "dark", "light", "ventilated", "sealed".
-    * @param handling - The handling status of the batch during distribution.
-    * Expected: "careful", "gentle", "do-not-stack", "keep-upright" "perishable",
-    * "flammable", "temperature-sensitive", "light-sensitive", "moisture-sensitive".
     * @param hash - Updated hash of the distributed batch.
     */
     function assignBatchToDistributor(
         uint256 batchId,
         uint256 distributorId,
-        uint32 latitude,
-        uint32 longitude,
-        string calldata storageCondition,
-        string calldata handling,
         string calldata hash
     ) public onlyCompanyUser {
-        BatchTypes.BatchInfo storage batchInfo = batchInfoForInternalId[internalIdForBatchId[batchId]];
+        BatchTypes.BatchInfo storage batchInfo = batchInfoForId[batchId];
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.AtDistributors);
         batchInfo.state = BatchTypes.BatchState.AtDistributors;
         distributorsIdsForBatchId[batchId].add(distributorId);
-        distributionEventForId[_distributionEventId++] = BatchTypes.DistributionEvent({
-            date: uint64(block.timestamp),
-            latitude: latitude,
-            longitude: longitude,
-            storageCondition: storageCondition,
-            handling: handling
-        });
         updateBatch(batchId, batchInfo, hash);
     }
 
@@ -181,29 +122,17 @@ contract SupplyChain is BatchManager {
     * @dev To assign a distributed batch to a retailer. Requires onchain state & metadata validation.
     * @param batchId - BatchID of the batch to be retailed.
     * @param retailerId - The actor ID of the retailer involved.
-    * @param latitude - The latitude of the retailer.
-    * @param longitude - The longitude of the retailer.
-    * @param quantity - The quantity of the batch retailed.
     * @param hash - Updated hash of the retailed batch.
     */
     function assignBatchToRetailer(
         uint256 batchId,
         uint256 retailerId,
-        uint32 latitude,
-        uint32 longitude,
-        uint256 quantity,
         string calldata hash
     ) public onlyCompanyUser {
-        BatchTypes.BatchInfo storage batchInfo = batchInfoForInternalId[internalIdForBatchId[batchId]];
+        BatchTypes.BatchInfo storage batchInfo = batchInfoForId[batchId];
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.AtRetailers);
         batchInfo.state = BatchTypes.BatchState.AtRetailers;
         retailersIdsForBatchId[batchId].add(retailerId);
-        retailEventForId[_retailEventId++] = BatchTypes.RetailEvent({
-            date: uint64(block.timestamp),
-            latitude: latitude,
-            longitude: longitude,
-            quantity: quantity
-        });
         updateBatch(batchId, batchInfo, hash);
     }
 
@@ -301,7 +230,7 @@ contract SupplyChain is BatchManager {
     * @dev Post fulfillment function to register the batch for the corresponding farmerId on chain.
     */
     function performBatchCreation(uint256 _batchId) internal override returns(bool) {
-        return farmers[batchInfoForInternalId[internalIdForBatchId[_batchId]].farmerId].batchIds.add(_batchId);
+        return farmers[batchInfoForId[_batchId].farmerId].batchIds.add(_batchId);
     }
 
     /**
@@ -310,7 +239,7 @@ contract SupplyChain is BatchManager {
     function performBatchUpdate(uint256 _batchId) internal override returns(bool) {
         (
             BatchTypes.BatchState state,
-            uint256 farmerId,
+            ,
             uint256 processorId,
             uint256 packagerId,
             uint256[] memory distributorIds,
@@ -327,8 +256,10 @@ contract SupplyChain is BatchManager {
         } else if (state == BatchTypes.BatchState.AtRetailers) {
             uint256 retailerAdded = retailerIds[retailerIds.length - 1];
             return retailers[retailerAdded].batchIds.add(_batchId);
+        } else {
+            // For any intermediary state do nothing
+            return true;
         }
-        return false;
     }
 
     /**
