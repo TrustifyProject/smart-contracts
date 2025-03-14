@@ -1,7 +1,9 @@
-# Dynamic NFT Based Supply Chain
+<img src="https://github.com/user-attachments/assets/ae339287-07d8-4304-a7ff-af584181f27e" alt="Trustify Logo" height="150">
+
+# 📜 Trustify - dNFT Smart Contracts
 ![Hardhat CI](https://github.com/TrustifyProject/smart-contracts/actions/workflows/ci.yml/badge.svg)
 
-An innovative blockchain-based traceability tool designed for the agrifood industry. It certifies the quality and origin of products by tracking each step of the production process, from planting to the distribution, using the blockchain technology.
+The counterfeit "Made in Italy" market is a growing issue, causing significant economic and reputational damage to authentic Italian brands. The lack of reliable and decentralized supply chain traceability solutions has allowed counterfeit goods to proliferate. NapulETH, in partnership with the University of Federico II and Confindustria, is developing a blockchain-based digital twin solution leveraging Ethereum, Zero-Knowledge Proofs (ZK), and IoT integrations to ensure full transparency and authenticity in the agrifood sector. This initiative aims to create an immutable, verifiable, and privacy-preserving system to certify product origin and quality.
 
 ## Introduction
 These smart contracts are designed to manage and track the lifecycle of produced batches in the supply chain & the actors involved in each step. All actors are assigned a soul-bound unique NFT that should be generated based on their compliance and necessary checks. Similarly, each batch is represented by a unique dNFT tied to the necessary on-chain data held in `BatchManager` contract.
