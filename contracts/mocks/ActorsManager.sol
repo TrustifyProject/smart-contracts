@@ -21,6 +21,7 @@ contract ActorsManager {
         _;
     }
 
+    uint256 private _nextActorId;
     uint8 public constant ACTOR_TYPE_COUNT = 6;
     enum ActorType {
         Farmer,
@@ -66,7 +67,7 @@ contract ActorsManager {
         onlyValidActorType(actorType)
         onlyAuthorizedContract
     {        
-        uint256 actorId = actors[actorType].registerActor(account, hash);
+        uint256 actorId = actors[actorType].registerActor(account, ++_nextActorId, hash);
         emit ActorRegistered(actorType, actorId, account, hash);
     }
 
@@ -98,34 +99,5 @@ contract ActorsManager {
         returns(string memory)
     {
         return actors[actorType].tokenURI(actorId);
-    }
-
-    /**
-    * @dev To retrieve the batch URIs in a chunk, chunk size cannot exceed 100.
-    * @param actorType - The type of the actor (Expected: 0-5).
-    * @param cursor - The starting index (ID) of the actors.
-    * @param pageSize - Total request size.
-    * @return The hashes of the actors.
-    */
-    function getActorsURIsInBatch(uint8 actorType, uint256 cursor, uint256 pageSize)
-        public
-        view
-        onlyValidActorType(actorType)
-        returns (string[] memory)
-    {
-        if (!(pageSize < 101)) revert Errors.OutOfBounds(pageSize, 100);
-        Actor actorContract = actors[actorType];
-        uint256 totalSupply = actorContract.totalSupply();
-        if (!(cursor < totalSupply)) revert Errors.OutOfBounds(cursor, totalSupply);
-
-        uint256 endIndex = cursor + pageSize;
-        if (endIndex > totalSupply) endIndex = totalSupply;
-
-        uint256 actualPageSize = endIndex - cursor;
-        string[] memory actorURIs = new string[](actualPageSize);
-        for (uint256 i = 0; i < actualPageSize; i++) {
-            actorURIs[i] = actorContract.tokenURI(cursor + i);
-        }
-        return actorURIs;
     }
 }

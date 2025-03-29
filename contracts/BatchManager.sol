@@ -25,8 +25,8 @@ abstract contract BatchManager is Batch {
     mapping(uint256 => EnumerableSet.UintSet) internal retailersIdsForBatchId;
     mapping(uint256 => BatchTypes.BatchInfo) public batchInfoForId;
 
-    event BatchCreated(uint256 indexed batchId, string hash, uint256 timestamp);
-    event BatchStatusUpdated(uint256 indexed batchId, BatchTypes.BatchState state, string hash, uint256 timestamp);
+    event BatchCreated(uint256 indexed batchId, uint256 indexed actorId, string hash, uint256 timestamp);
+    event BatchStatusUpdated(uint256 indexed batchId, BatchTypes.BatchState state, uint256 indexed actorId, string hash, uint256 timestamp);
 
     /**
     * @dev Sets the ACL and determines the hash AUTHORIZED_CONTRACT_ROLE.
@@ -51,17 +51,19 @@ abstract contract BatchManager is Batch {
         uint256 _batchId = _createBatch(msg.sender, hash);
         if (!performBatchCreation(_batchId)) revert Errors.FulfillmentFailed();
         batchInfoForId[_batchId] = _batch;
-        emit BatchCreated(_batchId, hash, block.timestamp);
+        emit BatchCreated(_batchId, _farmerId, hash, block.timestamp);
     }
 
     /**
     * @dev Updates the metadata of the batch if the metadata validation succeeds.
     * @param _batch - The new updated batch info itself.
+    * @param participant - The Actor participating int the current batch update.
     * @param hash - The hash of the new dynamically updated metadata.
     */
     function updateBatch(
         uint256 _batchId,
         BatchTypes.BatchInfo memory _batch,
+        uint256 participant,
         string calldata hash
     )
         internal
@@ -71,7 +73,7 @@ abstract contract BatchManager is Batch {
         _updateBatch(_batchId, hash);
         if (!performBatchUpdate(_batchId)) revert Errors.FulfillmentFailed();
         batchInfoForId[_batchId] = _batch;
-        emit BatchStatusUpdated(_batchId, _batch.state, hash, block.timestamp);
+        emit BatchStatusUpdated(_batchId, _batch.state, participant, hash, block.timestamp);
     }
 
     /**

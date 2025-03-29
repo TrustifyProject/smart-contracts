@@ -28,7 +28,7 @@ describe("ActorsManager", function () {
         it("Should registerActor()", async function () {
             await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH))
                 .to.emit(actorsManager, "ActorRegistered")
-                .withArgs(ACTOR_TYPE, 0, otherAccount.address, VALID_HASH);
+                .withArgs(ACTOR_TYPE, 1, otherAccount.address, VALID_HASH);
         });
 
         it("Should fail to registerActor() with invalid actor type", async function () {
@@ -44,7 +44,6 @@ describe("ActorsManager", function () {
 
     describe("Actor Update", function () {
         it("Should updateActor()", async function () {
-            
             await expect(await actorsManager.connect(authorizedContract).updateActor(ACTOR_TYPE, ACTOR_ID, VALID_HASH))
                 .to.emit(actorsManager, "ActorUpdated")
                 .withArgs(ACTOR_TYPE, ACTOR_ID, VALID_HASH);
@@ -65,44 +64,14 @@ describe("ActorsManager", function () {
         it("Should return URI using getActorURI()", async function () {
             await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH))
                 .to.emit(actorsManager, "ActorRegistered")
-                .withArgs(ACTOR_TYPE, 0, otherAccount.address, VALID_HASH);
-            const info = await actorsManager.getActorURI(ACTOR_TYPE, 0);
+                .withArgs(ACTOR_TYPE, 1, otherAccount.address, VALID_HASH);
+            const info = await actorsManager.getActorURI(ACTOR_TYPE, 1);
             expect(info).to.equal("ipfs://" + VALID_HASH);
         });
 
         it("Should fail to call getActorURI() with invalid actor type", async function () {
             await expect(actorsManager.getActorURI(7, ACTOR_ID))
                 .to.be.revertedWithCustomError(actorsManager, "InvalidActorType");
-        });
-    });
-
-    describe("Batch Actor Info", function () {
-        it("Should return URIs with getActorsURIsInBatch()", async function () {
-            const batchSize = 2;
-
-            await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccount.address, VALID_HASH))
-                .to.emit(actorsManager, "ActorRegistered")
-                .withArgs(ACTOR_TYPE, 0, otherAccount.address, VALID_HASH);
-            await expect(await actorsManager.connect(authorizedContract).registerActor(ACTOR_TYPE, otherAccountTwo.address, VALID_HASH))
-                .to.emit(actorsManager, "ActorRegistered")
-                .withArgs(ACTOR_TYPE, 1, otherAccountTwo.address, VALID_HASH);
-            const info = await actorsManager.connect(authorizedContract).getActorsURIsInBatch(ACTOR_TYPE, 0, 2);
-            expect(info.length).to.equal(batchSize);
-        });
-
-        it("Should fail to getActorsURIsInBatch() with invalid actor type", async function () {
-            await expect(actorsManager.getActorsURIsInBatch(7, 0, 2))
-                .to.be.revertedWithCustomError(actorsManager, "InvalidActorType");
-        });
-
-        it("Should fail if batch size exceeds 100", async function () {
-            await expect(actorsManager.getActorsURIsInBatch(ACTOR_TYPE, 0, 200))
-                .to.be.revertedWithCustomError(actorsManager, "OutOfBounds");
-        });
-
-        it("Should fail if start index is out of bounds", async function () {
-            await expect(actorsManager.getActorsURIsInBatch(ACTOR_TYPE, 200, 2))
-                .to.be.revertedWithCustomError(actorsManager, "OutOfBounds");
         });
     });
 

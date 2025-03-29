@@ -14,7 +14,6 @@ import { Errors } from "./Errors.sol";
 * @custom:security-contact @captainunknown7@gmail.com
 */
 contract Actor is ERC721, ERC721Enumerable, ERC721URIStorage {
-    uint256 private _nextActorId;
     AccessManager public acl;
     bytes32 immutable AUTHORIZED_CONTRACT_ROLE;
 
@@ -43,13 +42,12 @@ contract Actor is ERC721, ERC721Enumerable, ERC721URIStorage {
     * @param hash - The hash of the ID.
     * @return The registered Actor ID.
     */
-    function registerActor(address account, string calldata hash)
+    function registerActor(address account, uint256 actorId, string calldata hash)
     external
     onlyAuthorizedContract
     returns (uint256)
     {
         if (balanceOf(account) != 0) revert Errors.DoubleRegistrationNotAllowed();
-        uint256 actorId = _nextActorId++;
         _safeMint(account, actorId);
         _setTokenURI(actorId, hash);
         return actorId;
@@ -80,13 +78,6 @@ contract Actor is ERC721, ERC721Enumerable, ERC721URIStorage {
     */
     function safeTransferFrom(address /*from*/, address /*to*/, uint256 /*tokenId*/, bytes memory /*data*/) public pure override(IERC721, ERC721) {
         revert Errors.SoulBoundTransferNotAllowed();
-    }
-
-    /**
-    * @return Whether the id has been issued or not.
-    */
-    function idExists(uint256 id) public view returns(bool) {
-        return id < totalSupply();
     }
 
     // Necessary Overrides

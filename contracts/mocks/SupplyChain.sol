@@ -31,12 +31,10 @@ contract SupplyChain is BatchManager {
 
     struct IdsForDistributors {
         EnumerableSet.UintSet batchIds;
-        EnumerableSet.UintSet distributionEventIds;
     }
 
     struct IdsForRetailers {
         EnumerableSet.UintSet batchIds;
-        EnumerableSet.UintSet retailEventIds;
     }
 
     mapping(uint256 => BatchIdsForActors) private farmers;
@@ -79,7 +77,7 @@ contract SupplyChain is BatchManager {
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.Processed);
         batchInfo.state = BatchTypes.BatchState.Processed;
         batchInfo.processorId = processorId;
-        updateBatch(batchId, batchInfo, hash);
+        updateBatch(batchId, batchInfo, processorId, hash);
     }
 
     /**
@@ -97,7 +95,7 @@ contract SupplyChain is BatchManager {
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.Packaged);
         batchInfo.state = BatchTypes.BatchState.Packaged;
         batchInfo.packagerId = packagerId;
-        updateBatch(batchId, batchInfo, hash);
+        updateBatch(batchId, batchInfo, packagerId, hash);
     }
 
     /**
@@ -115,7 +113,7 @@ contract SupplyChain is BatchManager {
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.AtDistributors);
         batchInfo.state = BatchTypes.BatchState.AtDistributors;
         distributorsIdsForBatchId[batchId].add(distributorId);
-        updateBatch(batchId, batchInfo, hash);
+        updateBatch(batchId, batchInfo, distributorId, hash);
     }
 
     /**
@@ -133,7 +131,7 @@ contract SupplyChain is BatchManager {
         Validate.validateChronologicalOrder(batchInfo.state, BatchTypes.BatchState.AtRetailers);
         batchInfo.state = BatchTypes.BatchState.AtRetailers;
         retailersIdsForBatchId[batchId].add(retailerId);
-        updateBatch(batchId, batchInfo, hash);
+        updateBatch(batchId, batchInfo, retailerId, hash);
     }
 
     /**
@@ -179,28 +177,6 @@ contract SupplyChain is BatchManager {
     */
     function getBatchesRetailed(uint256 retailerId) public view returns (uint256[] memory) {
         return retailers[retailerId].batchIds.values();
-    }
-
-    /**
-    * @dev To retrieve all distributionEventIds for any particular distributor.
-    * @param distributorId - The distributor ID to retrieve the distributionEventIds for.
-    * @return The Distribution Event IDs the distributor was involved in.
-    */
-    function getDistributionEventIdsForDistributor(uint256 distributorId)
-        public view returns (uint256[] memory)
-    {
-        return distributors[distributorId].distributionEventIds.values();
-    }
-
-    /**
-    * @dev To retrieve all retailEventIds for any particular retailer.
-    * @param retailerId - The retailer ID to retrieve the retailEventIds for.
-    * @return The Retail Event IDs the retailer was involved in.
-    */
-    function getRetailEventIdsForRetailer(uint256 retailerId)
-        public view returns (uint256[] memory)
-    {
-        return retailers[retailerId].retailEventIds.values();
     }
 
     /**
@@ -256,10 +232,7 @@ contract SupplyChain is BatchManager {
         } else if (state == BatchTypes.BatchState.AtRetailers) {
             uint256 retailerAdded = retailerIds[retailerIds.length - 1];
             return retailers[retailerAdded].batchIds.add(_batchId);
-        } else {
-            // For any intermediary state do nothing
-            return true;
-        }
+        } else return true;
     }
 
     /**
