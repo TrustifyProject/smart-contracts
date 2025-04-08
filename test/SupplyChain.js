@@ -41,7 +41,7 @@ describe("SupplyChain", function () {
             await supplyChain.addHarvestedBatch(0, VALID_HASH);
             const batches = await supplyChain.getBatchesHarvested(0);
             expect(batches.length).to.equal(1);
-            expect(batches[0]).to.equal(0); // batchId
+            expect(batches[0]).to.equal(1); // batchId
         });
 
         it("Should pushBatchToProcessed()", async function () {
@@ -155,14 +155,6 @@ describe("SupplyChain", function () {
             await supplyChain.assignBatchToRetailer(0, 0, VALID_HASH);
 
             const batches = await supplyChain.getBatchesRetailed(0);
-            expect(batches.length).to.equal(1);
-            expect(batches[0]).to.equal(0);
-        });
-
-        it("Should addHarvestedBatch()", async function () {
-            await actorsManager.registerActor(0, farmer.address, VALID_HASH);
-            await supplyChain.addHarvestedBatch(0, VALID_HASH);
-            const batches = await supplyChain.getBatchesHarvested(0);
             expect(batches.length).to.equal(1);
             expect(batches[0]).to.equal(0);
         });

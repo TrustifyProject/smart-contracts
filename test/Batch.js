@@ -28,7 +28,7 @@ describe("Batch", function () {
     describe("Create Batch", function () {
         it("Should createBatch(), set token URI & return the Id", async function () {
             await batch.connect(authorizedContract)._createBatch(account1.address, hash);
-            const batchId = 0;
+            const batchId = 1;
             expect(await batch.ownerOf(batchId)).to.equal(account1.address);
             expect(await batch.tokenURI(batchId)).to.equal(`ipfs://${hash}`);
         });
@@ -36,8 +36,8 @@ describe("Batch", function () {
         it("Should increment the batch Id correctly", async function () {
             await batch.connect(authorizedContract)._createBatch(account1.address, "hash1");
             await batch.connect(authorizedContract)._createBatch(account2.address, "hash2");
-            expect(await batch.ownerOf(0)).to.equal(account1.address);
-            expect(await batch.ownerOf(1)).to.equal(account2.address);
+            expect(await batch.ownerOf(1)).to.equal(account1.address);
+            expect(await batch.ownerOf(2)).to.equal(account2.address);
         });
 
         it("Should return true if idExists()", async function () {
@@ -55,7 +55,7 @@ describe("Batch", function () {
     describe("Update Batch", function () {
         it("Should updateBatch() token URI", async function () {
             await batch.connect(authorizedContract)._createBatch(account1.address, hash);
-            const tokenId = 0;
+            const tokenId = 1;
             await batch.connect(authorizedContract)._updateBatch(tokenId, newHash);
             expect(await batch.tokenURI(tokenId)).to.equal(`ipfs://${newHash}`);
         });
@@ -70,7 +70,7 @@ describe("Batch", function () {
 
         it("Should return the correct tokenURI", async function () {
             await batch.connect(authorizedContract)._createBatch(account1.address, hash);
-            const tokenId = 0;
+            const tokenId = 1;
             expect(await batch.tokenURI(tokenId)).to.equal(`ipfs://${hash}`);
         });
     });

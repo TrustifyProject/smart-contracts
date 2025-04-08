@@ -34,7 +34,7 @@ contract Batch is ERC721, ERC721Enumerable, ERC721URIStorage {
     * @return The registered Batch ID.
     */
     function _createBatch(address account, string memory hash) public returns (uint256) {
-        uint256 batchId = _batchId++;
+        uint256 batchId = ++_batchId;
         _safeMint(account, batchId);
         _setTokenURI(batchId, hash);
         return batchId;

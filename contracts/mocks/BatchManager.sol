@@ -48,9 +48,9 @@ abstract contract BatchManager is Batch {
         _batch.farmerId = _farmerId;
         
         // Assumption: The Contract creates the batches on behalf of the farmers
-        uint256 _batchId = _createBatch(msg.sender, hash);
-        if (!performBatchCreation(_batchId)) revert Errors.FulfillmentFailed();
+        uint256 _batchId = _createBatch(address(this), hash);
         batchInfoForId[_batchId] = _batch;
+        if (!performBatchCreation(_batchId)) revert Errors.FulfillmentFailed();
         emit BatchCreated(_batchId, _farmerId, hash, block.timestamp);
     }
 
@@ -71,8 +71,8 @@ abstract contract BatchManager is Batch {
         if (!(idExists(_batchId))) revert Errors.InvalidTokenId();
         
         _updateBatch(_batchId, hash);
-        if (!performBatchUpdate(_batchId)) revert Errors.FulfillmentFailed();
         batchInfoForId[_batchId] = _batch;
+        if (!performBatchUpdate(_batchId)) revert Errors.FulfillmentFailed();
         emit BatchStatusUpdated(_batchId, _batch.state, participant, hash, block.timestamp);
     }
 

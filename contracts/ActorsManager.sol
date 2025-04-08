@@ -33,7 +33,7 @@ contract ActorsManager {
     }
     mapping(uint8 => Actor) public actors;
 
-    event ActorRegistered(uint8 indexed actorType, uint256 indexed actorId, address indexed account, string hash);
+    event ActorRegistered(uint8 indexed actorType, uint256 indexed actorId, address account, string hash);
     event ActorUpdated(uint8 indexed actorType, uint256 indexed actorId, string newHash);
 
     modifier onlyValidActorType(uint8 actorType) {
@@ -57,7 +57,7 @@ contract ActorsManager {
     }
 
     /**
-    * @dev Creates the batch & updates the on-chain state if the metadata validation succeeds.
+    * @dev Creates the actor soul bound identity.
     * @param actorType - The type of the actor to register (Expected: 0-5).
     * @param account - The account to receive the identification NFT.
     * @param hash - The hash of the metadata of the actor.
@@ -72,7 +72,7 @@ contract ActorsManager {
     }
 
     /**
-    * @dev Updates the metadata of the actor if the metadata validation succeeds.
+    * @dev Updates the actor soul bound identity.
     * @param actorType - The actor type (Expected: 0-5).
     * @param actorId - The actor ID to replace the hash of.
     * @param hash - The hash of the actor.
